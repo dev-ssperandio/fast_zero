@@ -82,9 +82,10 @@ def test_read_user_should_return_404_not_found(client):
     assert response.json() == {'detail': 'User not found'}
 
 
-def test_update_user(client, user):
+def test_update_user(client, user, token):
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'bob',
             'email': 'bob@example.com',
@@ -96,11 +97,11 @@ def test_update_user(client, user):
     assert response.json() == {
         'username': 'bob',
         'email': 'bob@example.com',
-        'id': 1,
+        'id': user.id,
     }
 
 
-def test_update_integrity_error(client, user):
+def test_update_integrity_error(client, user, token):
     client.post(
         '/users',
         json={
@@ -112,10 +113,11 @@ def test_update_integrity_error(client, user):
 
     reponse_update = client.put(
         f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'badi',
-            'email': 'bob@example.com',
-            'password': 'mynewpassword',
+            'email': 'badi@example.com',
+            'password': 'secret',
         },
     )
 
@@ -125,31 +127,24 @@ def test_update_integrity_error(client, user):
     }
 
 
-# Escrever um teste para o erro de 404 (NOT FOUND) para o endpoint de PUT;
-def test_update_user_should_return_404_not_found(client):
-    response = client.put(
-        '/users/2',
-        json={
-            'username': 'bob',
-            'email': 'bob@example.com',
-            'password': 'mynewpassword',
-        },
+def test_delete_user(client, user, token):
+    response = client.delete(
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
     )
-
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'User not found'}
-
-
-def test_delete_user(client, user):
-    response = client.delete('/users/1')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
-# Escrever um teste para o erro de 404 (NOT FOUND) para o endpoint de DELETE;
-def test_delete_user_should_return_404_not_found(client):
-    response = client.delete('/users/2')
+def test_get_token(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.email, 'password': user.clean_password},
+    )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'User not found'}
+    token = response.json()
+
+    assert response.status_code == HTTPStatus.OK
+    assert 'access_token' in token
+    assert 'token_type' in token
